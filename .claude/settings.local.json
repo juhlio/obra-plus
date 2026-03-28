@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker compose:*)",
+      "Bash(curl -s -X POST http://localhost:8000/api/auth/login -H \"Content-Type: application/json\" -d '{\"\"\"\"email\"\"\"\":\"\"\"\"admin@obraplus.com\"\"\"\",\"\"\"\"password\"\"\"\":\"\"\"\"password\"\"\"\"}')",
+      "Bash(python3 -m json.tool)"
+    ]
+  }
+}

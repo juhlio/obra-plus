@@ -1,0 +1,12 @@
+.env
+vendor/
+node_modules/
+backend/storage/app/public/*
+!backend/storage/app/public/.gitkeep
+backend/storage/logs/*
+!backend/storage/logs/.gitkeep
+*.log
+.DS_Store
+backend/bootstrap/cache/*
+!backend/bootstrap/cache/.gitkeep
+frontend/dist/
