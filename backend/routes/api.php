@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ConviteController;
 use App\Http\Controllers\CustoController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentoController;
@@ -11,88 +12,120 @@ use App\Http\Controllers\MovimentacaoController;
 use App\Http\Controllers\NotificacaoController;
 use App\Http\Controllers\ObraController;
 use App\Http\Controllers\RelatorioController;
+use App\Http\Controllers\UsuarioController;
 use Illuminate\Support\Facades\Route;
 
-// Rotas públicas
+// ── Rotas públicas ──────────────────────────────────────────────────────────
 Route::post('/auth/register', [AuthController::class, 'register']);
-Route::post('/auth/login', [AuthController::class, 'login']);
+Route::post('/auth/login',    [AuthController::class, 'login']);
 Route::post('/auth/forgot-password', fn () => response()->json(['message' => 'Em breve.']));
-
-// Rota de health check
 Route::get('/health', fn () => response()->json(['status' => 'ok', 'laravel' => app()->version()]));
 
-// Rotas protegidas
+// Convites — públicas (aceite de convite)
+Route::get('/convites/{token}/verificar', [ConviteController::class, 'verificar']);
+Route::post('/convites/{token}/aceitar',  [ConviteController::class, 'aceitar']);
+
+// ── Rotas protegidas ────────────────────────────────────────────────────────
 Route::middleware('auth:sanctum')->group(function () {
 
     // Auth
-    Route::post('/auth/logout', [AuthController::class, 'logout']);
-    Route::get('/auth/me', [AuthController::class, 'me']);
-    Route::put('/auth/profile', [AuthController::class, 'updateProfile']);
+    Route::post('/auth/logout',  [AuthController::class, 'logout']);
+    Route::get('/auth/me',       [AuthController::class, 'me']);
+    Route::put('/auth/profile',  [AuthController::class, 'updateProfile']);
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index']);
 
-    // Obras
-    Route::get('/obras', [ObraController::class, 'index']);
-    Route::post('/obras', [ObraController::class, 'store']);
-    Route::get('/obras/{obra}', [ObraController::class, 'show']);
-    Route::put('/obras/{obra}', [ObraController::class, 'update']);
-    Route::delete('/obras/{obra}', [ObraController::class, 'destroy']);
+    // ── Usuários e convites (somente admin) ─────────────────────────────────
+    Route::middleware('perfil:admin')->group(function () {
+        // IMPORTANTE: rota estática antes da dinâmica {user}
+        Route::get('/usuarios/convites',              [ConviteController::class, 'index']);
+        Route::post('/usuarios/convites',             [ConviteController::class, 'store']);
+        Route::delete('/usuarios/convites/{convite}', [ConviteController::class, 'destroy']);
+
+        Route::get('/usuarios',           [UsuarioController::class, 'index']);
+        Route::put('/usuarios/{user}',    [UsuarioController::class, 'update']);
+        Route::delete('/usuarios/{user}', [UsuarioController::class, 'destroy']);
+    });
+
+    // ── Obras ────────────────────────────────────────────────────────────────
+    Route::get('/obras',               [ObraController::class, 'index']);
+    Route::get('/obras/{obra}',        [ObraController::class, 'show']);
     Route::get('/obras/{obra}/resumo', [ObraController::class, 'resumo']);
 
-    // Etapas (nested em obra)
-    Route::get('/obras/{obra}/etapas', [EtapaController::class, 'index']);
-    Route::post('/obras/{obra}/etapas', [EtapaController::class, 'store']);
+    Route::middleware('perfil:admin,engenheiro')->group(function () {
+        Route::post('/obras',          [ObraController::class, 'store']);
+        Route::put('/obras/{obra}',    [ObraController::class, 'update']);
+        Route::delete('/obras/{obra}', [ObraController::class, 'destroy']);
+    });
 
-    // Etapas (standalone)
-    Route::put('/etapas/{etapa}', [EtapaController::class, 'update']);
+    // ── Etapas ───────────────────────────────────────────────────────────────
+    Route::get('/obras/{obra}/etapas',     [EtapaController::class, 'index']);
     Route::patch('/etapas/{etapa}/status', [EtapaController::class, 'updateStatus']);
-    Route::delete('/etapas/{etapa}', [EtapaController::class, 'destroy']);
 
-    // Custos
-    Route::get('/obras/{obra}/custos', [CustoController::class, 'index']);
-    Route::post('/obras/{obra}/custos', [CustoController::class, 'store']);
+    Route::middleware('perfil:admin,engenheiro')->group(function () {
+        Route::post('/obras/{obra}/etapas', [EtapaController::class, 'store']);
+        Route::put('/etapas/{etapa}',       [EtapaController::class, 'update']);
+        Route::delete('/etapas/{etapa}',    [EtapaController::class, 'destroy']);
+    });
+
+    // ── Custos ───────────────────────────────────────────────────────────────
+    Route::get('/obras/{obra}/custos',    [CustoController::class, 'index']);
     Route::get('/obras/{obra}/orcamento', [CustoController::class, 'orcamento']);
-    Route::put('/custos/{custo}', [CustoController::class, 'update']);
-    Route::delete('/custos/{custo}', [CustoController::class, 'destroy']);
 
-    // Documentos
-    Route::get('/obras/{obra}/documentos', [DocumentoController::class, 'index']);
-    Route::post('/obras/{obra}/documentos', [DocumentoController::class, 'store']);
+    Route::middleware('perfil:admin,engenheiro')->group(function () {
+        Route::post('/obras/{obra}/custos', [CustoController::class, 'store']);
+        Route::put('/custos/{custo}',       [CustoController::class, 'update']);
+        Route::delete('/custos/{custo}',    [CustoController::class, 'destroy']);
+    });
+
+    // ── Documentos ───────────────────────────────────────────────────────────
+    Route::get('/obras/{obra}/documentos',         [DocumentoController::class, 'index']);
     Route::get('/documentos/{documento}/download', [DocumentoController::class, 'download']);
     Route::patch('/documentos/{documento}/status', [DocumentoController::class, 'updateStatus']);
-    Route::delete('/documentos/{documento}', [DocumentoController::class, 'destroy']);
+    Route::delete('/documentos/{documento}',       [DocumentoController::class, 'destroy']);
 
-    // Movimentações por obra
+    Route::middleware('perfil:admin,engenheiro,mestre')->group(function () {
+        Route::post('/obras/{obra}/documentos', [DocumentoController::class, 'store']);
+    });
+
+    // ── Movimentações ────────────────────────────────────────────────────────
     Route::get('/obras/{obra}/movimentacoes', [MovimentacaoController::class, 'porObra']);
+    Route::get('/movimentacoes',              [MovimentacaoController::class, 'index']);
 
-    // Funcionários
+    Route::middleware('perfil:admin,engenheiro,mestre')->group(function () {
+        Route::post('/movimentacoes', [MovimentacaoController::class, 'store']);
+    });
+
+    // ── Funcionários ─────────────────────────────────────────────────────────
     Route::get('/funcionarios', [FuncionarioController::class, 'index']);
-    Route::post('/funcionarios', [FuncionarioController::class, 'store']);
-    Route::put('/funcionarios/{funcionario}', [FuncionarioController::class, 'update']);
-    Route::delete('/funcionarios/{funcionario}', [FuncionarioController::class, 'destroy']);
-    Route::post('/obras/{obra}/funcionarios/{funcionario}', [FuncionarioController::class, 'alocar']);
-    Route::delete('/obras/{obra}/funcionarios/{funcionario}', [FuncionarioController::class, 'desalocar']);
-    Route::patch('/obras/{obra}/funcionarios/{funcionario}/status', [FuncionarioController::class, 'updateStatus']);
 
-    // Materiais
-    Route::get('/materiais', [MaterialController::class, 'index']);
+    Route::middleware('perfil:admin,engenheiro')->group(function () {
+        Route::post('/funcionarios',             [FuncionarioController::class, 'store']);
+        Route::put('/funcionarios/{funcionario}', [FuncionarioController::class, 'update']);
+        Route::delete('/funcionarios/{funcionario}', [FuncionarioController::class, 'destroy']);
+        Route::post('/obras/{obra}/funcionarios/{funcionario}',   [FuncionarioController::class, 'alocar']);
+        Route::delete('/obras/{obra}/funcionarios/{funcionario}', [FuncionarioController::class, 'desalocar']);
+        Route::patch('/obras/{obra}/funcionarios/{funcionario}/status', [FuncionarioController::class, 'updateStatus']);
+    });
+
+    // ── Materiais ────────────────────────────────────────────────────────────
+    Route::get('/materiais',          [MaterialController::class, 'index']);
     Route::get('/materiais/criticos', [MaterialController::class, 'criticos']);
-    Route::post('/materiais', [MaterialController::class, 'store']);
-    Route::put('/materiais/{material}', [MaterialController::class, 'update']);
-    Route::delete('/materiais/{material}', [MaterialController::class, 'destroy']);
 
-    // Movimentações de estoque
-    Route::get('/movimentacoes', [MovimentacaoController::class, 'index']);
-    Route::post('/movimentacoes', [MovimentacaoController::class, 'store']);
+    Route::middleware('perfil:admin,engenheiro')->group(function () {
+        Route::post('/materiais',              [MaterialController::class, 'store']);
+        Route::put('/materiais/{material}',    [MaterialController::class, 'update']);
+        Route::delete('/materiais/{material}', [MaterialController::class, 'destroy']);
+    });
 
-    // Notificações
-    Route::get('/notificacoes', [NotificacaoController::class, 'index']);
+    // ── Notificações ─────────────────────────────────────────────────────────
+    Route::get('/notificacoes',                     [NotificacaoController::class, 'index']);
     Route::patch('/notificacoes/{notificacao}/ler', [NotificacaoController::class, 'marcarLida']);
-    Route::patch('/notificacoes/ler-todas', [NotificacaoController::class, 'marcarTodasLidas']);
+    Route::patch('/notificacoes/ler-todas',         [NotificacaoController::class, 'marcarTodasLidas']);
 
-    // Relatórios PDF
-    Route::get('/relatorios/obra/{obra}', [RelatorioController::class, 'obra']);
+    // ── Relatórios PDF ───────────────────────────────────────────────────────
+    Route::get('/relatorios/obra/{obra}',      [RelatorioController::class, 'obra']);
     Route::get('/relatorios/orcamento/{obra}', [RelatorioController::class, 'orcamento']);
-    Route::get('/relatorios/materiais', [RelatorioController::class, 'materiais']);
+    Route::get('/relatorios/materiais',        [RelatorioController::class, 'materiais']);
 });

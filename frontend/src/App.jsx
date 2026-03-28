@@ -5,8 +5,10 @@ import { ToastProvider } from './components/ui/Toast'
 import Layout from './components/layout/Layout'
 import Spinner from './components/ui/Spinner'
 
-import LoginPage      from './pages/LoginPage'
-import RegisterPage   from './pages/RegisterPage'
+import LoginPage           from './pages/LoginPage'
+import RegisterPage        from './pages/RegisterPage'
+import AceitarConvitePage  from './pages/AceitarConvitePage'
+import UsuariosPage        from './pages/UsuariosPage'
 import DashboardPage  from './pages/DashboardPage'
 import ObrasPage      from './pages/ObrasPage'
 import ObraDetailPage from './pages/ObraDetailPage'
@@ -21,10 +23,12 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
 })
 
-function PrivateRoute({ children }) {
+function PrivateRoute({ children, requiredPerfil }) {
   const { user, loading } = useAuth()
   if (loading) return <div className="flex h-screen items-center justify-center"><Spinner size="lg" /></div>
-  return user ? children : <Navigate to="/login" replace />
+  if (!user) return <Navigate to="/login" replace />
+  if (requiredPerfil && user.perfil !== requiredPerfil) return <Navigate to="/" replace />
+  return children
 }
 
 function PublicRoute({ children }) {
@@ -40,8 +44,9 @@ export default function App() {
         <AuthProvider>
           <ToastProvider>
             <Routes>
-              <Route path="/login"    element={<PublicRoute><LoginPage /></PublicRoute>} />
-              <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
+              <Route path="/login"            element={<PublicRoute><LoginPage /></PublicRoute>} />
+              <Route path="/register"        element={<PublicRoute><RegisterPage /></PublicRoute>} />
+              <Route path="/convite/:token"  element={<AceitarConvitePage />} />
 
               <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
                 <Route index             element={<DashboardPage />} />
@@ -53,6 +58,7 @@ export default function App() {
                 <Route path="materiais"  element={<MateriaisPage />} />
                 <Route path="documentos" element={<DocumentosPage />} />
                 <Route path="perfil"     element={<PerfilPage />} />
+                <Route path="usuarios"  element={<PrivateRoute requiredPerfil="admin"><UsuariosPage /></PrivateRoute>} />
               </Route>
             </Routes>
           </ToastProvider>

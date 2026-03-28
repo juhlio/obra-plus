@@ -100,6 +100,20 @@ export const documentos = {
   delete:       (id)         => client.delete(`/documentos/${id}`),
 }
 
+export const usuarios = {
+  list:   (params) => client.get('/usuarios', { params }),
+  update: (id, data) => client.put(`/usuarios/${id}`, data),
+  delete: (id)     => client.delete(`/usuarios/${id}`),
+}
+
+export const convites = {
+  list:     ()           => client.get('/usuarios/convites'),
+  create:   (data)       => client.post('/usuarios/convites', data),
+  delete:   (id)         => client.delete(`/usuarios/convites/${id}`),
+  verificar:(token)      => client.get(`/convites/${token}/verificar`),
+  aceitar:  (token, data)=> client.post(`/convites/${token}/aceitar`, data),
+}
+
 export const notificacoes = {
   list:           ()   => client.get('/notificacoes'),
   marcarLida:     (id) => client.patch(`/notificacoes/${id}/ler`),

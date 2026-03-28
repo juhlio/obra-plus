@@ -72,6 +72,15 @@ services:
     networks:
       - obraplus-network
 
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: obraplus-mailpit
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    networks:
+      - obraplus-network
+
 volumes:
   mysql-data:
 

@@ -1,5 +1,8 @@
-.PHONY: up down restart logs shell-app shell-db artisan composer npm migrate seed fresh test build
+.PHONY: up down restart logs shell-app shell-db artisan composer npm \
+        migrate seed fresh test \
+        prod-deploy prod-logs prod-down prod-shell prod-ssl
 
+# ── Desenvolvimento ───────────────────────────────────────────────────────────
 up:
 	docker compose up -d --build
 
@@ -39,5 +42,18 @@ fresh:
 test:
 	docker compose exec app php artisan test
 
-build:
-	docker compose -f docker-compose.prod.yml up -d --build
+# ── Produção ──────────────────────────────────────────────────────────────────
+prod-deploy:
+	./deploy.sh
+
+prod-ssl:
+	./deploy.sh --ssl
+
+prod-logs:
+	docker compose -f docker-compose.prod.yml logs -f
+
+prod-down:
+	docker compose -f docker-compose.prod.yml down
+
+prod-shell:
+	docker compose -f docker-compose.prod.yml exec app bash

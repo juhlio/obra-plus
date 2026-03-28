@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, Building2, CalendarDays, DollarSign,
-  Users, Package, FileText, Bell, Menu, X, LogOut, User,
+  Users, Package, FileText, Bell, Menu, LogOut, UserCog,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useNotificacoes } from '../../hooks/useNotificacoes'
@@ -15,6 +15,7 @@ const navItems = [
   { to: '/equipes',    label: 'Equipes',     icon: Users },
   { to: '/materiais',  label: 'Materiais',   icon: Package },
   { to: '/documentos', label: 'Documentos',  icon: FileText },
+  { to: '/usuarios',   label: 'Usuários',    icon: UserCog,  adminOnly: true },
 ]
 
 const pageTitles = {
@@ -26,6 +27,7 @@ const pageTitles = {
   '/materiais':  'Materiais',
   '/documentos': 'Documentos',
   '/perfil':     'Meu Perfil',
+  '/usuarios':   'Usuários',
 }
 
 function Initials({ name }) {
@@ -72,7 +74,7 @@ export default function Layout() {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        {navItems.map(({ to, label, icon: Icon }) => (
+        {navItems.filter((item) => !item.adminOnly || user?.perfil === 'admin').map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}

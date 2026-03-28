@@ -5,12 +5,10 @@ services:
     restart: always
     volumes:
       - ./backend:/var/www/html
+      - storage-data:/var/www/html/storage/app/public
     depends_on:
       db:
         condition: service_healthy
-    environment:
-      APP_ENV: production
-      APP_DEBUG: "false"
     networks:
       - obraplus-network
 
@@ -25,11 +23,12 @@ services:
       - "443:443"
     volumes:
       - ./backend:/var/www/html
-      - ./docker/nginx/prod.conf:/etc/nginx/conf.d/default.conf
-      - ./frontend/dist:/var/www/html/public/frontend
+      - ./frontend/dist:/var/www/frontend:ro
+      - ./docker/nginx/prod.conf:/etc/nginx/conf.d/default.conf:ro
+      - certbot-www:/var/www/certbot:ro
+      - certbot-certs:/etc/letsencrypt:ro
     depends_on:
       - app
-      - frontend-builder
     networks:
       - obraplus-network
 
@@ -53,18 +52,26 @@ services:
     networks:
       - obraplus-network
 
-  frontend-builder:
-    image: node:20-alpine
-    container_name: obraplus-frontend-builder
-    working_dir: /app
+  # Certbot — renovação automática de SSL (Let's Encrypt)
+  certbot:
+    image: certbot/certbot:latest
+    container_name: obraplus-certbot
     volumes:
-      - ./frontend:/app
-    command: sh -c "npm install && npm run build"
-    networks:
-      - obraplus-network
+      - certbot-www:/var/www/certbot
+      - certbot-certs:/etc/letsencrypt
+    entrypoint: >
+      sh -c "trap exit TERM; while :; do
+        certbot renew --webroot -w /var/www/certbot --quiet;
+        sleep 12h & wait $${!};
+      done"
+    depends_on:
+      - nginx
 
 volumes:
   mysql-data:
+  storage-data:
+  certbot-www:
+  certbot-certs:
 
 networks:
   obraplus-network:
